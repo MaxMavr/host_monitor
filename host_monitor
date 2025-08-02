@@ -1,0 +1,92 @@
+#!/bin/bash
+
+CONFIG_FILE="$HOME/.host_monitor.conf"
+
+RED="\e[31m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+BLUE="\e[34m"
+CYAN="\e[36m"
+BOLD="\e[1m"
+RESET="\e[0m"
+
+if [[ -f $CONFIG_FILE ]]; then
+    source "$CONFIG_FILE"
+else
+    echo -e "${RED}Файл конфига $CONFIG_FILE не найден!${RESET}" >&2
+    exit 1
+fi
+
+INTERVAL=5
+METHOD="ssh"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --once) ONCE=true ;;
+        --interval) INTERVAL="$2"; shift ;;
+        --method) METHOD="$2"; shift ;;
+        --help)
+            echo "Использование: $0 [опции]"
+            echo "  --once           Проверить один раз и выйти"
+            echo "  --interval N     Интервал между проверками (сек)"
+            echo "  --method m       Метод проверки: ssh или ping"
+            echo "  --help           Показать это сообщение"
+            exit 0
+            ;;
+    esac
+    shift
+done
+
+
+cleanup() {
+    tput cnorm
+    exit
+}
+trap cleanup EXIT SIGINT SIGTERM
+tput civis
+
+check_host() {
+    local host=$1
+    local start=$(date +%s%3N)
+    local status
+    local ms
+
+    if [[ $METHOD == "ssh" ]]; then
+        if timeout 3 ssh -o ConnectTimeout=2 -o BatchMode=yes -o StrictHostKeyChecking=no "$host" "exit" &>/dev/null; then
+            ms=$(( $(date +%s%3N) - start ))
+            status="${GREEN}ДОСТУПЕН${RESET} ${ms}мс"
+        else
+            status="${RED}НЕДОСТУПЕН${RESET}"
+        fi
+    elif [[ $METHOD == "ping" ]]; then
+        if ping -c 1 -W 2 "$host" &>/dev/null; then
+            ms=$(( $(date +%s%3N) - start ))
+            status="${GREEN}ДОСТУПЕН${RESET} ${ms}мс"
+        else
+            status="${RED}НЕДОСТУПЕН${RESET}"
+        fi
+    fi
+
+    echo -e "  ${BOLD}•${RESET} ${CYAN}$host${RESET} — $status"
+}
+
+print_header() {
+    echo -e "${BOLD}${BLUE}╔══════════════════════════════════╗${RESET}"
+    echo -e "${BOLD}${BLUE}║   Мониторинг хостов — $(date '+%H:%M:%S')   ║${RESET}"
+    echo -e "${BOLD}${BLUE}╚══════════════════════════════════╝${RESET}"
+}
+
+run_monitor() {
+    while true; do
+        clear
+        print_header
+        for host in "${HOSTS[@]}"; do
+            check_host "$host" &
+        done
+        wait
+        [[ $ONCE == true ]] && break
+        sleep "$INTERVAL"
+    done
+}
+
+run_monitor
