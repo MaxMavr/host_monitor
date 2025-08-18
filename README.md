@@ -1,7 +1,7 @@
 <h1 align="center">Host Monitor</h1>
 <p align="center">
-<img src="https://img.shields.io/badge/made%20by-MaxMavr-fcbf49" >
-<img src="https://img.shields.io/badge/version-0.0.3-a7c957">
+<img src="https://img.shields.io/badge/made%20by-MaxMavr-DDDDDD" >
+<img src="https://img.shields.io/badge/version-0.0.3-DDDDDD">
 </p>
 
 Красивый Bash‑скрипт для мониторинга доступности удалённых хостов через **SSH** или **Ping**.
